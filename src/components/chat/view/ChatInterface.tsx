@@ -169,6 +169,9 @@ function ChatInterface({
     handleAbortSession,
     handlePermissionDecision,
     handleGrantToolPermission,
+    messageQueue,
+    removeQueuedMessage,
+    clearMessageQueue,
     handleInputFocusChange,
     isInputFocused,
   } = useChatComposerState({
@@ -410,6 +413,9 @@ function ChatInterface({
           })}
           isTextareaExpanded={isTextareaExpanded}
           sendByCtrlEnter={sendByCtrlEnter}
+          messageQueue={messageQueue}
+          onRemoveQueuedMessage={removeQueuedMessage}
+          onClearMessageQueue={clearMessageQueue}
         />
       </div>
 

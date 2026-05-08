@@ -78,6 +78,15 @@ interface CommandExecutionResult {
   hasFileIncludes?: boolean;
 }
 
+// Queued user message awaiting the current turn to finish. Mirrors what
+// Claude Code's CLI does when the user keeps typing while the agent runs.
+interface QueuedMessage {
+  id: string;
+  content: string;
+  thinkingMode: string;
+  images: File[];
+}
+
 const createFakeSubmitEvent = () => {
   return { preventDefault: () => undefined } as unknown as FormEvent<HTMLFormElement>;
 };
@@ -152,6 +161,24 @@ export function useChatComposerState({
     ((event: FormEvent<HTMLFormElement> | MouseEvent | TouchEvent | KeyboardEvent<HTMLTextAreaElement>) => Promise<void>) | null
   >(null);
   const inputValueRef = useRef(input);
+
+  // Messages the user typed while a previous turn was still running. They get
+  // drained one-by-one as soon as `isLoading` flips false. Cleared by abort.
+  const [messageQueue, setMessageQueue] = useState<QueuedMessage[]>([]);
+  const messageQueueRef = useRef<QueuedMessage[]>([]);
+  useEffect(() => {
+    messageQueueRef.current = messageQueue;
+  }, [messageQueue]);
+  // Tracks the previous loading state so we only drain on the falling edge.
+  const wasLoadingRef = useRef(isLoading);
+
+  const removeQueuedMessage = useCallback((id: string) => {
+    setMessageQueue((prev) => prev.filter((m) => m.id !== id));
+  }, []);
+
+  const clearMessageQueue = useCallback(() => {
+    setMessageQueue([]);
+  }, []);
 
   const handleBuiltInCommand = useCallback(
     (result: CommandExecutionResult) => {
@@ -466,7 +493,30 @@ export function useChatComposerState({
     ) => {
       event.preventDefault();
       const currentInput = inputValueRef.current;
-      if (!currentInput.trim() || isLoading || !selectedProject) {
+      if (!currentInput.trim() || !selectedProject) {
+        return;
+      }
+
+      // Mid-turn submit → queue the message and clear the composer so the user
+      // can keep typing. The drain effect (below) sends it once isLoading flips.
+      if (isLoading) {
+        const queued: QueuedMessage = {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          content: currentInput,
+          thinkingMode,
+          images: [...attachedImages],
+        };
+        setMessageQueue((prev) => [...prev, queued]);
+        setInput('');
+        inputValueRef.current = '';
+        setAttachedImages([]);
+        setUploadingImages(new Map());
+        setImageErrors(new Map());
+        resetCommandMenuState();
+        setIsTextareaExpanded(false);
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+        }
         return;
       }
 
@@ -708,6 +758,33 @@ export function useChatComposerState({
     handleSubmitRef.current = handleSubmit;
   }, [handleSubmit]);
 
+  // Drain the queue on the falling edge of isLoading. We re-populate the
+  // composer with the next queued message and re-fire handleSubmit. The submit
+  // flips isLoading=true again, so this effect won't re-enter until the next
+  // turn finishes.
+  useEffect(() => {
+    const wasLoading = wasLoadingRef.current;
+    wasLoadingRef.current = isLoading;
+    if (!wasLoading || isLoading) {
+      return;
+    }
+    const queue = messageQueueRef.current;
+    if (queue.length === 0) {
+      return;
+    }
+    const next = queue[0];
+    setMessageQueue((prev) => prev.slice(1));
+    setInput(next.content);
+    inputValueRef.current = next.content;
+    setAttachedImages(next.images);
+    setThinkingMode(next.thinkingMode);
+    // Defer one tick so React commits the input/state before submit reads them.
+    const timer = setTimeout(() => {
+      handleSubmitRef.current?.(createFakeSubmitEvent());
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
   useEffect(() => {
     inputValueRef.current = input;
   }, [input]);
@@ -880,6 +957,8 @@ export function useChatComposerState({
       sessionId: targetSessionId,
       provider,
     });
+    // Match the CLI: aborting also drops anything the user had queued up.
+    setMessageQueue([]);
   }, [canAbortSession, currentSessionId, pendingViewSessionRef, provider, selectedSession?.id, sendMessage]);
 
   const handleGrantToolPermission = useCallback(
@@ -978,5 +1057,8 @@ export function useChatComposerState({
     handleGrantToolPermission,
     handleInputFocusChange,
     isInputFocused,
+    messageQueue,
+    removeQueuedMessage,
+    clearMessageQueue,
   };
 }

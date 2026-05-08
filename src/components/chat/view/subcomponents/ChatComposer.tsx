@@ -11,7 +11,7 @@ import type {
   SetStateAction,
   TouchEvent,
 } from 'react';
-import { ImageIcon, MessageSquareIcon, XIcon, ArrowDownIcon } from 'lucide-react';
+import { ImageIcon, MessageSquareIcon, XIcon, ArrowDownIcon, ClockIcon } from 'lucide-react';
 import type { PendingPermissionRequest, PermissionMode, Provider } from '../../types/types';
 import CommandMenu from './CommandMenu';
 import ClaudeStatus from './ClaudeStatus';
@@ -101,6 +101,9 @@ interface ChatComposerProps {
   placeholder: string;
   isTextareaExpanded: boolean;
   sendByCtrlEnter?: boolean;
+  messageQueue: { id: string; content: string }[];
+  onRemoveQueuedMessage: (id: string) => void;
+  onClearMessageQueue: () => void;
 }
 
 export default function ChatComposer({
@@ -156,6 +159,9 @@ export default function ChatComposer({
   placeholder,
   isTextareaExpanded,
   sendByCtrlEnter,
+  messageQueue,
+  onRemoveQueuedMessage,
+  onClearMessageQueue,
 }: ChatComposerProps) {
   const { t } = useTranslation('chat');
   const textareaRect = textareaRef.current?.getBoundingClientRect();
@@ -266,6 +272,48 @@ export default function ChatComposer({
             </div>
           )}
 
+          {messageQueue.length > 0 && (
+            <PromptInputHeader>
+              <div className="rounded-xl bg-muted/40 p-2">
+                <div className="mb-1 flex items-center justify-between px-1 text-[11px] text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <ClockIcon className="h-3 w-3" />
+                    {t('input.queued', { defaultValue: '{{count}} queued', count: messageQueue.length })}
+                  </span>
+                  {messageQueue.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={onClearMessageQueue}
+                      className="rounded px-1 text-[11px] text-muted-foreground hover:text-foreground"
+                    >
+                      {t('input.clearQueue', { defaultValue: 'Clear all' })}
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {messageQueue.map((queued) => (
+                    <span
+                      key={queued.id}
+                      title={queued.content}
+                      className="inline-flex max-w-xs items-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-2 py-1 text-xs text-foreground"
+                    >
+                      <ClockIcon className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
+                      <span className="truncate">{queued.content}</span>
+                      <button
+                        type="button"
+                        onClick={() => onRemoveQueuedMessage(queued.id)}
+                        className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+                        aria-label={t('input.removeQueued', { defaultValue: 'Remove from queue' })}
+                      >
+                        <XIcon className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </PromptInputHeader>
+          )}
+
           {attachedImages.length > 0 && (
             <PromptInputHeader>
               <div className="rounded-xl bg-muted/40 p-2">
@@ -304,7 +352,7 @@ export default function ChatComposer({
               onFocus={() => onInputFocusChange?.(true)}
               onBlur={() => onInputFocusChange?.(false)}
               onInput={onTextareaInput}
-              placeholder={placeholder}
+              placeholder={isLoading ? t('input.queuePlaceholder', { defaultValue: 'Type to queue another...' }) : placeholder}
             />
         </PromptInputBody>
 
@@ -399,7 +447,7 @@ export default function ChatComposer({
               {sendByCtrlEnter ? t('input.hintText.ctrlEnter') : t('input.hintText.enter')}
             </div>
             <PromptInputSubmit
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim()}
               className="h-10 w-10 sm:h-10 sm:w-10"
               onMouseDown={(event) => {
                 event.preventDefault();
