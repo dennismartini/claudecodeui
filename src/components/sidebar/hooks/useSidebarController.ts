@@ -582,10 +582,13 @@ export function useSidebarController({
     [projectSortOrder, projectsWithResolvedStarState],
   );
 
-  const filteredProjects = useMemo(
-    () => filterProjects(sortedProjects, debouncedSearchQuery),
-    [debouncedSearchQuery, sortedProjects],
-  );
+  const filteredProjects = useMemo(() => {
+    const matchedBySearch = filterProjects(sortedProjects, debouncedSearchQuery);
+    if (searchMode === 'pinned') {
+      return matchedBySearch.filter((project) => Boolean(project.isStarred));
+    }
+    return matchedBySearch;
+  }, [debouncedSearchQuery, searchMode, sortedProjects]);
 
   const filteredArchivedSessions = useMemo(() => {
     const normalizedSearch = debouncedSearchQuery.trim().toLowerCase();

@@ -1,12 +1,14 @@
-import { Folder, Search } from 'lucide-react';
+import { Folder, Pin, Search } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import type { LoadingProgress } from '../../../../types/app';
+import type { SidebarSearchMode } from '../../types/types';
 
 type SidebarProjectsStateProps = {
   isLoading: boolean;
   loadingProgress: LoadingProgress | null;
   projectsCount: number;
   filteredProjectsCount: number;
+  searchMode?: SidebarSearchMode;
   t: TFunction;
 };
 
@@ -15,6 +17,7 @@ export default function SidebarProjectsState({
   loadingProgress,
   projectsCount,
   filteredProjectsCount,
+  searchMode,
   t,
 }: SidebarProjectsStateProps) {
   if (isLoading) {
@@ -64,6 +67,21 @@ export default function SidebarProjectsState({
   }
 
   if (filteredProjectsCount === 0) {
+    if (searchMode === 'pinned') {
+      return (
+        <div className="px-4 py-12 text-center md:py-8">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted md:mb-3">
+            <Pin className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 className="mb-2 text-base font-medium text-foreground md:mb-1">
+            {t('projects.noPinnedProjects', 'No pinned workspaces')}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {t('projects.pinHint', 'Click the pin icon on any workspace to pin it here.')}
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="px-4 py-12 text-center md:py-8">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted md:mb-3">

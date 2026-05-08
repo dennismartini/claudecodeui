@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import type { TFunction } from 'i18next';
 
 import type { LoadingProgress, Project, ProjectSession, LLMProvider } from '../../../../types/app';
-import type { MCPServerStatus, SessionWithProvider } from '../../types/types';
+import type { MCPServerStatus, SessionWithProvider, SidebarSearchMode } from '../../types/types';
 
 import SidebarProjectItem from './SidebarProjectItem';
 import SidebarProjectsState from './SidebarProjectsState';
@@ -24,6 +24,7 @@ export type SidebarProjectListProps = {
   deletingProjects: Set<string>;
   tasksEnabled: boolean;
   mcpServerStatus: MCPServerStatus;
+  searchMode?: SidebarSearchMode;
   getProjectSessions: (project: Project) => SessionWithProvider[];
   onLoadMoreSessions: (projectId: string) => void;
   loadingMoreProjects: Set<string>;
@@ -68,6 +69,7 @@ export default function SidebarProjectList({
   deletingProjects,
   tasksEnabled,
   mcpServerStatus,
+  searchMode,
   getProjectSessions,
   onLoadMoreSessions,
   loadingMoreProjects,
@@ -95,6 +97,7 @@ export default function SidebarProjectList({
       loadingProgress={loadingProgress}
       projectsCount={projects.length}
       filteredProjectsCount={filteredProjects.length}
+      searchMode={searchMode}
       t={t}
     />
   );

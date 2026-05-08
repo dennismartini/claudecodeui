@@ -1,4 +1,4 @@
-import { Archive, Folder, FolderPlus, MessageSquare, Plus, RefreshCw, Search, X, PanelLeftClose } from 'lucide-react';
+import { Archive, Folder, FolderPlus, MessageSquare, Pin, Plus, RefreshCw, Search, X, PanelLeftClose } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import { Button, Input, Tooltip } from '../../../../shared/view/ui';
 import { IS_PLATFORM } from '../../../../constants/config';
@@ -51,7 +51,9 @@ export default function SidebarHeader({
     ? t('search.conversationsPlaceholder')
     : searchMode === 'archived'
       ? t('search.archivedPlaceholder', 'Search archived sessions...')
-      : t('projects.searchPlaceholder');
+      : searchMode === 'pinned'
+        ? t('search.pinnedPlaceholder', 'Search pinned workspaces...')
+        : t('projects.searchPlaceholder');
 
   const LogoBlock = () => (
     <div className="flex min-w-0 items-center gap-2.5">
@@ -153,6 +155,22 @@ export default function SidebarHeader({
                 <MessageSquare className="h-3 w-3" />
                 {t('search.modeConversations')}
               </button>
+              <Tooltip content={t('search.pinnedOnlyTooltip', 'Pinned only')} position="top">
+                <button
+                  onClick={() => onSearchModeChange('pinned')}
+                  aria-pressed={searchMode === 'pinned'}
+                  aria-label={t('search.pinnedOnlyTooltip', 'Pinned only')}
+                  title={t('search.pinnedOnlyTooltip', 'Pinned only')}
+                  className={cn(
+                    "flex items-center justify-center rounded-md px-2.5 py-1.5 text-xs font-medium transition-all",
+                    searchMode === 'pinned'
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Pin className="h-3 w-3" />
+                </button>
+              </Tooltip>
               <Tooltip content={t('search.archiveOnlyTooltip', 'Archive only')} position="top">
                 <button
                   onClick={() => onSearchModeChange('archived')}
@@ -270,6 +288,22 @@ export default function SidebarHeader({
                 <MessageSquare className="h-3 w-3" />
                 {t('search.modeConversations')}
               </button>
+              <Tooltip content={t('search.pinnedOnlyTooltip', 'Pinned only')} position="top">
+                <button
+                  onClick={() => onSearchModeChange('pinned')}
+                  aria-pressed={searchMode === 'pinned'}
+                  aria-label={t('search.pinnedOnlyTooltip', 'Pinned only')}
+                  title={t('search.pinnedOnlyTooltip', 'Pinned only')}
+                  className={cn(
+                    "flex items-center justify-center rounded-md px-2.5 py-1.5 text-xs font-medium transition-all",
+                    searchMode === 'pinned'
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Pin className="h-3 w-3" />
+                </button>
+              </Tooltip>
               <Tooltip content={t('search.archiveOnlyTooltip', 'Archive only')} position="top">
                 <button
                   onClick={() => onSearchModeChange('archived')}

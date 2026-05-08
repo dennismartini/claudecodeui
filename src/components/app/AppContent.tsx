@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import Sidebar from '../sidebar/view/Sidebar';
+import SidebarResizeHandle from '../sidebar/view/subcomponents/SidebarResizeHandle';
 import MainContent from '../main-content/view/MainContent';
 import CommandPalette from '../command-palette/CommandPalette';
 import { useWebSocket } from '../../contexts/WebSocketContext';
@@ -10,6 +11,12 @@ import { PaletteOpsProvider, usePaletteOpsRegister } from '../../contexts/Palett
 import { useDeviceSettings } from '../../hooks/useDeviceSettings';
 import { useSessionProtection } from '../../hooks/useSessionProtection';
 import { useProjectsState } from '../../hooks/useProjectsState';
+import { useUiPreferences } from '../../hooks/useUiPreferences';
+import {
+  useSidebarWidth,
+  SIDEBAR_MIN_WIDTH,
+  SIDEBAR_MAX_WIDTH,
+} from '../../hooks/useSidebarWidth';
 
 export default function AppContent() {
   return (
@@ -26,6 +33,9 @@ function AppContentInner() {
   const { isMobile } = useDeviceSettings({ trackPWA: false });
   const { ws, sendMessage, latestMessage, isConnected } = useWebSocket();
   const wasConnectedRef = useRef(false);
+  const { preferences } = useUiPreferences();
+  const { width: sidebarWidth, setWidth: setSidebarWidth, resetWidth: resetSidebarWidth } = useSidebarWidth();
+  const isSidebarVisibleDesktop = preferences.sidebarVisible;
 
   const {
     activeSessions,
@@ -140,8 +150,20 @@ function AppContentInner() {
   return (
     <div className="fixed inset-0 flex bg-background" style={{ bottom: 'var(--keyboard-height, 0px)' }}>
       {!isMobile ? (
-        <div className="h-full flex-shrink-0 border-r border-border/50">
+        <div
+          className="relative h-full flex-shrink-0 border-r border-border/50"
+          style={isSidebarVisibleDesktop ? { width: `${sidebarWidth}px` } : undefined}
+        >
           <Sidebar {...sidebarSharedProps} />
+          {isSidebarVisibleDesktop && (
+            <SidebarResizeHandle
+              width={sidebarWidth}
+              onWidthChange={setSidebarWidth}
+              onReset={resetSidebarWidth}
+              minWidth={SIDEBAR_MIN_WIDTH}
+              maxWidth={SIDEBAR_MAX_WIDTH}
+            />
+          )}
         </div>
       ) : (
         <div

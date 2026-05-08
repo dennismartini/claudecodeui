@@ -157,6 +157,7 @@ function Sidebar({
     deletingProjects,
     tasksEnabled,
     mcpServerStatus,
+    searchMode,
     getProjectSessions,
     loadingMoreProjects,
     isProjectStarred,

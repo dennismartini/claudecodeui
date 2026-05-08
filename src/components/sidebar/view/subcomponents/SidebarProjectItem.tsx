@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronRight, Edit3, Folder, FolderOpen, Star, Trash2, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Edit3, Folder, FolderOpen, Pin, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { Button } from '../../../../shared/view/ui';
@@ -223,9 +223,9 @@ export default function SidebarProjectItem({
                         event.stopPropagation();
                         toggleStarProject();
                       }}
-                      title={isStarred ? t('tooltips.removeFromFavorites') : t('tooltips.addToFavorites')}
+                      title={isStarred ? t('tooltips.unpin') : t('tooltips.pin')}
                     >
-                      <Star
+                      <Pin
                         className={cn(
                           'w-4 h-4 transition-colors',
                           isStarred
@@ -361,9 +361,9 @@ export default function SidebarProjectItem({
                     event.stopPropagation();
                     toggleStarProject();
                   }}
-                  title={isStarred ? t('tooltips.removeFromFavorites') : t('tooltips.addToFavorites')}
+                  title={isStarred ? t('tooltips.unpin') : t('tooltips.pin')}
                 >
-                  <Star
+                  <Pin
                     className={cn(
                       'w-3 h-3 transition-colors',
                       isStarred

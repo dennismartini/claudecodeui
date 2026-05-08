@@ -17,7 +17,9 @@
     "projects": "projects",
     "noMatchingProjects": "No matching projects",
     "tryDifferentSearch": "Try adjusting your search term",
-    "runClaudeCli": "Run Claude CLI in a project directory to get started"
+    "runClaudeCli": "Run Claude CLI in a project directory to get started",
+    "noPinnedProjects": "No pinned workspaces",
+    "pinHint": "Click the pin icon on any workspace to pin it here."
   },
   "app": {
     "title": "CloudCLI",
@@ -43,6 +45,8 @@
     "deleteProject": "Remove project from sidebar (Delete)",
     "addToFavorites": "Add to favorites",
     "removeFromFavorites": "Remove from favorites",
+    "pin": "Pin to top",
+    "unpin": "Unpin",
     "editSessionName": "Manually edit session name",
     "deleteSession": "Delete this session permanently",
     "save": "Save",
@@ -114,6 +118,10 @@
     "modeProjects": "Projects",
     "modeConversations": "Conversations",
     "conversationsPlaceholder": "Search in conversations...",
+    "pinnedOnlyTooltip": "Pinned only",
+    "pinnedPlaceholder": "Search pinned workspaces...",
+    "archiveOnlyTooltip": "Archive only",
+    "archivedPlaceholder": "Search archived sessions...",
     "searching": "Searching...",
     "noResults": "No results found",
     "tryDifferentQuery": "Try a different search query",
