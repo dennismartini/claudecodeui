@@ -11,7 +11,7 @@ import express from 'express';
 import cors from 'cors';
 import mime from 'mime-types';
 
-import { AppError, WORKSPACES_ROOT, validateWorkspacePath } from '@/shared/utils.js';
+import { AppError, WORKSPACES_BROWSE_ROOT, validateWorkspacePath } from '@/shared/utils.js';
 import { closeSessionsWatcher, initializeSessionsWatcher } from '@/modules/providers/index.js';
 import { createWebSocketServer } from '@/modules/websocket/index.js';
 
@@ -288,10 +288,10 @@ app.post('/api/system/update', authenticateToken, async (req, res) => {
 const expandWorkspacePath = (inputPath) => {
     if (!inputPath) return inputPath;
     if (inputPath === '~') {
-        return WORKSPACES_ROOT;
+        return WORKSPACES_BROWSE_ROOT;
     }
     if (inputPath.startsWith('~/') || inputPath.startsWith('~\\')) {
-        return path.join(WORKSPACES_ROOT, inputPath.slice(2));
+        return path.join(WORKSPACES_BROWSE_ROOT, inputPath.slice(2));
     }
     return inputPath;
 };
@@ -302,9 +302,9 @@ app.get('/api/browse-filesystem', authenticateToken, async (req, res) => {
         const { path: dirPath } = req.query;
 
         console.log('[API] Browse filesystem request for path:', dirPath);
-        console.log('[API] WORKSPACES_ROOT is:', WORKSPACES_ROOT);
+        console.log('[API] WORKSPACES_BROWSE_ROOT is:', WORKSPACES_BROWSE_ROOT);
         // Default to home directory if no path provided
-        const defaultRoot = WORKSPACES_ROOT;
+        const defaultRoot = WORKSPACES_BROWSE_ROOT;
         let targetPath = dirPath ? expandWorkspacePath(dirPath) : defaultRoot;
 
         // Resolve and normalize the path

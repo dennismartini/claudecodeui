@@ -98,12 +98,15 @@ export class AppError extends Error {
 // ---------------------------
 //----------------- WORKSPACE PATH VALIDATION UTILITIES ------------
 /**
- * Root directory that all workspace/project paths must stay under.
+ * Optional sandbox root.
  *
- * This is resolved from `WORKSPACES_ROOT` when configured; otherwise it falls
- * back to the current user's home directory.
+ * When `WORKSPACES_ROOT` is set, all workspace/project paths must live under
+ * it (multi-user / hosted deploys). When unset, we don't enforce containment
+ * — only the FORBIDDEN_WORKSPACE_PATHS guard stays active. The home directory
+ * is still used as the *default starting location* for the folder browser UI.
  */
-export const WORKSPACES_ROOT = process.env.WORKSPACES_ROOT || os.homedir();
+export const WORKSPACES_ROOT: string | null = process.env.WORKSPACES_ROOT || null;
+export const WORKSPACES_BROWSE_ROOT = WORKSPACES_ROOT || os.homedir();
 
 /**
  * System-critical paths that must never be used as workspace roots.
@@ -266,38 +269,43 @@ export async function validateWorkspacePath(requestedPath: string): Promise<Work
       }
     }
 
-    const resolvedWorkspaceRoot = normalizeProjectPath(await realpath(WORKSPACES_ROOT));
-    if (
-      !resolvedPath.startsWith(`${resolvedWorkspaceRoot}${path.sep}`)
-      && resolvedPath !== resolvedWorkspaceRoot
-    ) {
-      return {
-        valid: false,
-        error: `Workspace path must be within the allowed workspace root: ${WORKSPACES_ROOT}`,
-      };
-    }
-
-    try {
-      await access(absolutePath);
-      const pathStats = await lstat(absolutePath);
-      if (pathStats.isSymbolicLink()) {
-        const symlinkTarget = await readlink(absolutePath);
-        const resolvedSymlinkPath = path.resolve(path.dirname(absolutePath), symlinkTarget);
-        const realSymlinkPath = await realpath(resolvedSymlinkPath);
-        if (
-          !realSymlinkPath.startsWith(`${resolvedWorkspaceRoot}${path.sep}`)
-          && realSymlinkPath !== resolvedWorkspaceRoot
-        ) {
-          return {
-            valid: false,
-            error: 'Symlink target is outside the allowed workspace root',
-          };
-        }
+    // Sandbox root containment is opt-in via WORKSPACES_ROOT. When unset,
+    // skip this check entirely — the FORBIDDEN_WORKSPACE_PATHS guard above
+    // still blocks system-critical directories.
+    if (WORKSPACES_ROOT) {
+      const resolvedWorkspaceRoot = normalizeProjectPath(await realpath(WORKSPACES_ROOT));
+      if (
+        !resolvedPath.startsWith(`${resolvedWorkspaceRoot}${path.sep}`)
+        && resolvedPath !== resolvedWorkspaceRoot
+      ) {
+        return {
+          valid: false,
+          error: `Workspace path must be within the allowed workspace root: ${WORKSPACES_ROOT}`,
+        };
       }
-    } catch (error) {
-      const fileError = error as NodeJS.ErrnoException;
-      if (fileError.code !== 'ENOENT') {
-        throw fileError;
+
+      try {
+        await access(absolutePath);
+        const pathStats = await lstat(absolutePath);
+        if (pathStats.isSymbolicLink()) {
+          const symlinkTarget = await readlink(absolutePath);
+          const resolvedSymlinkPath = path.resolve(path.dirname(absolutePath), symlinkTarget);
+          const realSymlinkPath = await realpath(resolvedSymlinkPath);
+          if (
+            !realSymlinkPath.startsWith(`${resolvedWorkspaceRoot}${path.sep}`)
+            && realSymlinkPath !== resolvedWorkspaceRoot
+          ) {
+            return {
+              valid: false,
+              error: 'Symlink target is outside the allowed workspace root',
+            };
+          }
+        }
+      } catch (error) {
+        const fileError = error as NodeJS.ErrnoException;
+        if (fileError.code !== 'ENOENT') {
+          throw fileError;
+        }
       }
     }
 
