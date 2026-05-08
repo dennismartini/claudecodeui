@@ -302,19 +302,17 @@ function extractTokenBudget(resultMessage) {
     return null;
   }
 
-  // Use cumulative tokens if available (tracks total for the session)
-  // Otherwise fall back to per-request tokens
-  const inputTokens = modelData.cumulativeInputTokens || modelData.inputTokens || 0;
-  const outputTokens = modelData.cumulativeOutputTokens || modelData.outputTokens || 0;
-  const cacheReadTokens = modelData.cumulativeCacheReadInputTokens || modelData.cacheReadInputTokens || 0;
-  const cacheCreationTokens = modelData.cumulativeCacheCreationInputTokens || modelData.cacheCreationInputTokens || 0;
+  // For "context window used" we want the size of the live conversation,
+  // not cumulative session cost. Each turn re-sends the full transcript,
+  // so the latest turn's inputTokens ~= current context occupancy. Cache
+  // tokens are a subset of input (already counted) so we don't add them.
+  const inputTokens = modelData.inputTokens || 0;
+  const outputTokens = modelData.outputTokens || 0;
+  const totalUsed = inputTokens + outputTokens;
 
-  // Total used = input + output + cache tokens
-  const totalUsed = inputTokens + outputTokens + cacheReadTokens + cacheCreationTokens;
-
-  // Use configured context window budget from environment (default 160000)
-  // This is the user's budget limit, not the model's context window
-  const contextWindow = parseInt(process.env.CONTEXT_WINDOW) || 160000;
+  // Configurable budget; defaults to 1M (Opus 4.7 [1m] beta window).
+  // Override CONTEXT_WINDOW=200000 if you're not on the 1M beta.
+  const contextWindow = parseInt(process.env.CONTEXT_WINDOW) || 1000000;
 
   // Token calc logged via token-budget WS event
 

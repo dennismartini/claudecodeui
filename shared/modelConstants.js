@@ -16,13 +16,15 @@ export const CLAUDE_MODELS = {
     { value: "opus", label: "Opus" },
     { value: "sonnet", label: "Sonnet" },
     { value: "haiku", label: "Haiku" },
+    { value: "claude-opus-4-7", label: "Opus 4.7" },
+    { value: "claude-opus-4-7[1m]", label: "Opus 4.7 [1M]" },
     { value: "claude-opus-4-6", label: "Opus 4.6" },
     { value: "opusplan", label: "Opus Plan" },
     { value: "sonnet[1m]", label: "Sonnet [1M]" },
     { value: "opus[1m]", label: "Opus [1M]" },
   ],
 
-  DEFAULT: "opus",
+  DEFAULT: "claude-opus-4-7[1m]",
 };
 
 /**
