@@ -227,8 +227,8 @@ Custom commands can be created in:
       Number(
         tokenUsage.total ??
           tokenUsage.contextWindow ??
-          parseInt(process.env.CONTEXT_WINDOW || '160000', 10),
-      ) || 160000;
+          parseInt(process.env.CONTEXT_WINDOW || '1000000', 10),
+      ) || 1000000;
     const percentage = total > 0 ? Number(((used / total) * 100).toFixed(1)) : 0;
 
     const inputTokensRaw =

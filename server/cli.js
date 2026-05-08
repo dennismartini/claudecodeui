@@ -178,7 +178,7 @@ Environment Variables:
   PORT                Set server port (default: 3001) (LEGACY)
   DATABASE_PATH       Set custom database location
   CLAUDE_CLI_PATH     Set custom Claude CLI path
-  CONTEXT_WINDOW      Set context window size (default: 160000)
+  CONTEXT_WINDOW      Set context window size (default: 1000000)
 
 Documentation:
   ${packageJson.homepage || 'https://github.com/siteboon/claudecodeui'}

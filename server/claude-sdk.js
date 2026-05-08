@@ -302,13 +302,17 @@ function extractTokenBudget(resultMessage) {
     return null;
   }
 
-  // For "context window used" we want the size of the live conversation,
-  // not cumulative session cost. Each turn re-sends the full transcript,
-  // so the latest turn's inputTokens ~= current context occupancy. Cache
-  // tokens are a subset of input (already counted) so we don't add them.
+  // For "context window used" we want the size of the input that was
+  // actually sent on the most recent turn — which is what fills the model's
+  // window. The SDK splits input into 3 buckets (regular + cache_read +
+  // cache_creation) and they sum to the true input size. We use per-turn
+  // values, NOT cumulative — cumulative grows monotonically and inflates
+  // to 100% within a few turns. Output tokens are excluded by ccusage
+  // convention since they join context only on the next turn.
   const inputTokens = modelData.inputTokens || 0;
-  const outputTokens = modelData.outputTokens || 0;
-  const totalUsed = inputTokens + outputTokens;
+  const cacheReadTokens = modelData.cacheReadInputTokens || 0;
+  const cacheCreationTokens = modelData.cacheCreationInputTokens || 0;
+  const totalUsed = inputTokens + cacheReadTokens + cacheCreationTokens;
 
   // Configurable budget; defaults to 1M (Opus 4.7 [1m] beta window).
   // Override CONTEXT_WINDOW=200000 if you're not on the 1M beta.
