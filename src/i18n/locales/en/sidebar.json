@@ -52,7 +52,8 @@
     "save": "Save",
     "cancel": "Cancel",
     "clearSearch": "Clear search",
-    "openCommandPalette": "Open command palette"
+    "openCommandPalette": "Open command palette",
+    "moreActions": "More actions"
   },
   "navigation": {
     "chat": "Chat",

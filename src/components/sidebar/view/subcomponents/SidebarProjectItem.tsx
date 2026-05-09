@@ -1,5 +1,6 @@
 import { Check, ChevronDown, ChevronRight, Edit3, Folder, FolderOpen, Pin, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
+import { useRef } from 'react';
 
 import { Button } from '../../../../shared/view/ui';
 import { cn } from '../../../../lib/utils';
@@ -7,6 +8,7 @@ import type { Project, ProjectSession, LLMProvider } from '../../../../types/app
 import type { MCPServerStatus, SessionWithProvider } from '../../types/types';
 import { getTaskIndicatorStatus } from '../../utils/utils';
 
+import RowActionsMenu, { type RowActionsMenuHandle } from './RowActionsMenu';
 import TaskIndicator from './TaskIndicator';
 import SidebarProjectSessions from './SidebarProjectSessions';
 
@@ -114,6 +116,25 @@ export default function SidebarProjectItem({
 
     toggleProject();
   };
+
+  const desktopMenuRef = useRef<RowActionsMenuHandle>(null);
+  const mobileMenuRef = useRef<RowActionsMenuHandle>(null);
+
+  const projectActions = [
+    {
+      id: 'rename',
+      label: t('actions.rename'),
+      icon: <Edit3 className="h-3 w-3 text-muted-foreground" />,
+      onSelect: () => onStartEditingProject(project),
+    },
+    {
+      id: 'delete',
+      label: t('actions.delete'),
+      icon: <Trash2 className="h-3 w-3" />,
+      danger: true,
+      onSelect: () => onDeleteProject(project),
+    },
+  ];
 
   return (
     <div className={cn('md:space-y-1', isDeleting && 'opacity-50 pointer-events-none')}>
@@ -235,25 +256,14 @@ export default function SidebarProjectItem({
                       />
                     </button>
 
-                    <button
-                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-500/10 active:scale-90 dark:border-red-800 dark:bg-red-900/30"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onDeleteProject(project);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
-                    </button>
-
-                    <button
-                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 active:scale-90 dark:border-primary/30 dark:bg-primary/20"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onStartEditingProject(project);
-                      }}
-                    >
-                      <Edit3 className="h-4 w-4 text-primary" />
-                    </button>
+                    <RowActionsMenu
+                      ref={mobileMenuRef}
+                      actions={projectActions}
+                      triggerLabel={t('tooltips.moreActions', 'More actions')}
+                      triggerSize="md"
+                      alwaysVisible
+                      triggerClassName="w-8 h-8 rounded-lg border border-border/50 bg-muted/30"
+                    />
 
                     <div className="flex h-6 w-6 items-center justify-center rounded-md bg-muted/30">
                       {isExpanded ? (
@@ -279,6 +289,11 @@ export default function SidebarProjectItem({
               'bg-yellow-50/50 dark:bg-yellow-900/10 hover:bg-yellow-100/50 dark:hover:bg-yellow-900/20',
           )}
           onClick={selectAndToggleProject}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            desktopMenuRef.current?.open();
+          }}
         >
           <div className="flex min-w-0 flex-1 items-center gap-3">
             {isExpanded ? (
@@ -372,26 +387,12 @@ export default function SidebarProjectItem({
                     )}
                   />
                 </div>
-                <div
-                  className="touch:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded opacity-0 transition-all duration-200 hover:bg-accent group-hover:opacity-100"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onStartEditingProject(project);
-                  }}
-                  title={t('tooltips.renameProject')}
-                >
-                  <Edit3 className="h-3 w-3" />
-                </div>
-                <div
-                  className="touch:opacity-100 flex h-6 w-6 cursor-pointer items-center justify-center rounded opacity-0 transition-all duration-200 hover:bg-red-50 group-hover:opacity-100 dark:hover:bg-red-900/20"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onDeleteProject(project);
-                  }}
-                  title={t('tooltips.deleteProject')}
-                >
-                  <Trash2 className="h-3 w-3 text-red-600 dark:text-red-400" />
-                </div>
+                <RowActionsMenu
+                  ref={desktopMenuRef}
+                  actions={projectActions}
+                  triggerLabel={t('tooltips.moreActions', 'More actions')}
+                  triggerSize="md"
+                />
                 {isExpanded ? (
                   <ChevronDown className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" />
                 ) : (

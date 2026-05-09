@@ -1,5 +1,6 @@
 import { Check, Edit2, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
+import { useRef } from 'react';
 
 import { Badge, Button } from '../../../../shared/view/ui';
 import { cn } from '../../../../lib/utils';
@@ -7,6 +8,7 @@ import type { Project, ProjectSession, LLMProvider } from '../../../../types/app
 import type { SessionWithProvider } from '../../types/types';
 import { createSessionViewModel } from '../../utils/utils';
 import SessionProviderLogo from '../../../llm-logo-provider/SessionProviderLogo';
+import RowActionsMenu, { type RowActionsMenuHandle } from './RowActionsMenu';
 
 type SidebarSessionItemProps = {
   project: Project;
@@ -93,6 +95,27 @@ export default function SidebarSessionItem({
     onDeleteSession(project.projectId, session.id, sessionView.sessionName, session.__provider);
   };
 
+  const desktopMenuRef = useRef<RowActionsMenuHandle>(null);
+  const mobileMenuRef = useRef<RowActionsMenuHandle>(null);
+
+  const sessionActions = [
+    {
+      id: 'rename',
+      label: t('actions.rename'),
+      icon: <Edit2 className="h-3 w-3 text-muted-foreground" />,
+      onSelect: () => onStartEditingSession(session.id, sessionView.sessionName),
+    },
+    ...(sessionView.isCursorSession
+      ? []
+      : [{
+          id: 'delete',
+          label: t('actions.delete'),
+          icon: <Trash2 className="h-3 w-3" />,
+          danger: true,
+          onSelect: requestDeleteSession,
+        }]),
+  ];
+
   return (
     <div className="group relative">
       {sessionView.isActive && (
@@ -138,16 +161,15 @@ export default function SidebarSessionItem({
               </div>
             </div>
 
-            {!sessionView.isCursorSession && (
-              <button
-                className="ml-1 flex h-5 w-5 items-center justify-center rounded-md bg-red-50 opacity-70 transition-transform active:scale-95 dark:bg-red-900/20"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  requestDeleteSession();
-                }}
-              >
-                <Trash2 className="h-2.5 w-2.5 text-red-600 dark:text-red-400" />
-              </button>
+            {sessionActions.length > 0 && (
+              <RowActionsMenu
+                ref={mobileMenuRef}
+                actions={sessionActions}
+                triggerLabel={t('tooltips.moreActions', 'More actions')}
+                triggerSize="sm"
+                alwaysVisible
+                triggerClassName="ml-1 rounded-md bg-muted/30"
+              />
             )}
           </div>
         </div>
@@ -161,6 +183,11 @@ export default function SidebarSessionItem({
             isSelected && 'bg-accent text-accent-foreground',
           )}
           onClick={() => onSessionSelect(session, project.projectId)}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            desktopMenuRef.current?.open();
+          }}
         >
           <div className="flex w-full min-w-0 items-start gap-2">
             <SessionProviderLogo provider={session.__provider} className="mt-0.5 h-3 w-3 flex-shrink-0" />
@@ -221,30 +248,14 @@ export default function SidebarSessionItem({
                 </button>
               </>
             ) : (
-              <>
-                <button
-                  className="flex h-6 w-6 items-center justify-center rounded bg-gray-50 hover:bg-gray-100 dark:bg-gray-900/20 dark:hover:bg-gray-900/40"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onStartEditingSession(session.id, sessionView.sessionName);
-                  }}
-                  title={t('tooltips.editSessionName')}
-                >
-                  <Edit2 className="h-3 w-3 text-gray-600 dark:text-gray-400" />
-                </button>
-                {!sessionView.isCursorSession && (
-                  <button
-                    className="flex h-6 w-6 items-center justify-center rounded bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      requestDeleteSession();
-                    }}
-                    title={t('tooltips.deleteSessionOptions', 'Archive or permanently delete this session')}
-                  >
-                    <Trash2 className="h-3 w-3 text-red-600 dark:text-red-400" />
-                  </button>
-                )}
-              </>
+              sessionActions.length > 0 && (
+                <RowActionsMenu
+                  ref={desktopMenuRef}
+                  actions={sessionActions}
+                  triggerLabel={t('tooltips.moreActions', 'More actions')}
+                  triggerSize="md"
+                />
+              )
             )}
           </div>
       </div>
