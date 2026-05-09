@@ -14,12 +14,32 @@ const getPermissionModesForProvider = (provider: LLMProvider): PermissionMode[] 
   return ['default', 'acceptEdits', 'bypassPermissions', 'plan'];
 };
 
+// Global fallback used when a session has no saved permission mode of its own.
+// Mirrors the Claude Code CLI where --dangerously-skip-permissions is process-wide,
+// not per-conversation. Per-session keys (permissionMode-<sessionId>) still win.
+const DEFAULT_PERMISSION_MODE_KEY = 'defaultPermissionMode';
+
+const readGlobalDefaultMode = (provider: LLMProvider): PermissionMode => {
+  try {
+    const saved = localStorage.getItem(DEFAULT_PERMISSION_MODE_KEY) as PermissionMode | null;
+    const validModes = getPermissionModesForProvider(provider);
+    if (saved && validModes.includes(saved)) {
+      return saved;
+    }
+  } catch {
+    // ignore
+  }
+  return 'default';
+};
+
 interface UseChatProviderStateArgs {
   selectedSession: ProjectSession | null;
 }
 
 export function useChatProviderState({ selectedSession }: UseChatProviderStateArgs) {
-  const [permissionMode, setPermissionMode] = useState<PermissionMode>('default');
+  // Initial mode falls back to the global default so the very first send in a
+  // freshly opened window already respects the user's preference.
+  const [permissionMode, setPermissionMode] = useState<PermissionMode>(() => readGlobalDefaultMode('claude'));
   const [pendingPermissionRequests, setPendingPermissionRequests] = useState<PendingPermissionRequest[]>([]);
   const [provider, setProvider] = useState<LLMProvider>(() => {
     return (localStorage.getItem('selected-provider') as LLMProvider) || 'claude';
@@ -46,7 +66,12 @@ export function useChatProviderState({ selectedSession }: UseChatProviderStateAr
 
     const savedMode = localStorage.getItem(`permissionMode-${selectedSession.id}`) as PermissionMode | null;
     const validModes = getPermissionModesForProvider(provider);
-    setPermissionMode(savedMode && validModes.includes(savedMode) ? savedMode : 'default');
+    if (savedMode && validModes.includes(savedMode)) {
+      setPermissionMode(savedMode);
+      return;
+    }
+    // No per-session preference — honor the global default.
+    setPermissionMode(readGlobalDefaultMode(provider));
   }, [selectedSession?.id, provider]);
 
   useEffect(() => {
@@ -104,6 +129,14 @@ export function useChatProviderState({ selectedSession }: UseChatProviderStateAr
 
     if (selectedSession?.id) {
       localStorage.setItem(`permissionMode-${selectedSession.id}`, nextMode);
+    }
+    // Sticky default: the most recent explicit choice becomes the fallback for
+    // any session that hasn't set its own mode. Matches the CLI's process-wide
+    // --dangerously-skip-permissions semantics.
+    try {
+      localStorage.setItem(DEFAULT_PERMISSION_MODE_KEY, nextMode);
+    } catch {
+      // ignore — non-critical
     }
   }, [permissionMode, provider, selectedSession?.id]);
 

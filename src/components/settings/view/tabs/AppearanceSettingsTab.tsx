@@ -1,12 +1,29 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DarkModeToggle } from '../../../../shared/view/ui';
 import type { CodeEditorSettingsState, ProjectSortOrder } from '../../types/types';
+import type { PermissionMode } from '../../../chat/types/types';
 import LanguageSelector from '../../../../shared/view/ui/LanguageSelector';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import SettingsCard from '../SettingsCard';
 import SettingsRow from '../SettingsRow';
 import SettingsSection from '../SettingsSection';
 import SettingsToggle from '../SettingsToggle';
+
+const DEFAULT_PERMISSION_MODE_KEY = 'defaultPermissionMode';
+const DEFAULT_PERMISSION_MODE_OPTIONS: PermissionMode[] = ['default', 'auto', 'acceptEdits', 'bypassPermissions'];
+
+const readDefaultPermissionMode = (): PermissionMode => {
+  try {
+    const value = localStorage.getItem(DEFAULT_PERMISSION_MODE_KEY) as PermissionMode | null;
+    if (value && DEFAULT_PERMISSION_MODE_OPTIONS.includes(value)) {
+      return value;
+    }
+  } catch {
+    // ignore
+  }
+  return 'default';
+};
 
 type AppearanceSettingsTabProps = {
   projectSortOrder: ProjectSortOrder;
@@ -31,6 +48,15 @@ export default function AppearanceSettingsTab({
 }: AppearanceSettingsTabProps) {
   const { t } = useTranslation('settings');
   const { theme, setTheme } = useTheme();
+  const [defaultPermissionMode, setDefaultPermissionMode] = useState<PermissionMode>(readDefaultPermissionMode);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(DEFAULT_PERMISSION_MODE_KEY, defaultPermissionMode);
+    } catch {
+      // ignore — non-critical
+    }
+  }, [defaultPermissionMode]);
 
   return (
     <div className="space-y-8">
@@ -54,6 +80,29 @@ export default function AppearanceSettingsTab({
               <option value="light">{t('appearanceSettings.theme.light', 'Light')}</option>
               <option value="dark">{t('appearanceSettings.theme.dark', 'Dark (classic)')}</option>
               <option value="vscode-dark">{t('appearanceSettings.theme.vscodeDark', 'Dark (VS Code grayscale)')}</option>
+            </select>
+          </SettingsRow>
+        </SettingsCard>
+      </SettingsSection>
+
+      <SettingsSection title={t('appearanceSettings.permissionMode.label', 'Default permission mode')}>
+        <SettingsCard>
+          <SettingsRow
+            label={t('appearanceSettings.permissionMode.label', 'Default permission mode')}
+            description={t(
+              'appearanceSettings.permissionMode.description',
+              'Mode applied to new sessions (and any session without its own preference). Use "Bypass Permissions" to skip approval prompts globally — same as Claude Code CLI with --dangerously-skip-permissions.',
+            )}
+          >
+            <select
+              value={defaultPermissionMode}
+              onChange={(event) => setDefaultPermissionMode(event.target.value as PermissionMode)}
+              className="w-full rounded-lg border border-input bg-card p-2.5 text-sm text-foreground touch-manipulation focus:border-primary focus:ring-1 focus:ring-primary sm:w-56"
+            >
+              <option value="default">{t('appearanceSettings.permissionMode.optionDefault', 'Default (ask each time)')}</option>
+              <option value="auto">{t('appearanceSettings.permissionMode.optionAuto', 'Auto')}</option>
+              <option value="acceptEdits">{t('appearanceSettings.permissionMode.optionAcceptEdits', 'Accept edits')}</option>
+              <option value="bypassPermissions">{t('appearanceSettings.permissionMode.optionBypass', 'Bypass permissions')}</option>
             </select>
           </SettingsRow>
         </SettingsCard>
