@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -6,6 +6,7 @@ import Sidebar from '../sidebar/view/Sidebar';
 import SidebarResizeHandle from '../sidebar/view/subcomponents/SidebarResizeHandle';
 import MainContent from '../main-content/view/MainContent';
 import CommandPalette from '../command-palette/CommandPalette';
+import ConversationTabs from '../conversation-tabs/ConversationTabs';
 import { useWebSocket } from '../../contexts/WebSocketContext';
 import { PaletteOpsProvider, usePaletteOpsRegister } from '../../contexts/PaletteOpsContext';
 import { useDeviceSettings } from '../../hooks/useDeviceSettings';
@@ -17,6 +18,8 @@ import {
   SIDEBAR_MIN_WIDTH,
   SIDEBAR_MAX_WIDTH,
 } from '../../hooks/useSidebarWidth';
+import { useOpenSessionTabs, type SessionTab } from '../../hooks/useOpenSessionTabs';
+import { getAllSessions } from '../sidebar/utils/utils';
 
 export default function AppContent() {
   return (
@@ -47,6 +50,7 @@ function AppContentInner() {
   } = useSessionProtection();
 
   const {
+    projects,
     selectedProject,
     selectedSession,
     activeTab,
@@ -62,6 +66,9 @@ function AppContentInner() {
     refreshProjectsSilently,
     sidebarSharedProps,
     handleNewSession,
+    handleSessionSelect,
+    handleSessionDelete,
+    handleProjectDelete,
   } = useProjectsState({
     sessionId,
     navigate,
@@ -69,6 +76,113 @@ function AppContentInner() {
     isMobile,
     activeSessions,
   });
+
+  const { tabs, openTab, closeTab, removeTab, removeTabsForProject, updateTabTitle } = useOpenSessionTabs();
+
+  // Mirror the active session into the tab strip. We open a tab on every
+  // selectedSession change (the hook focuses an existing tab if it's already
+  // open, so this is idempotent).
+  useEffect(() => {
+    if (!selectedSession?.id || !selectedSession.__provider) return;
+    const projectId =
+      selectedSession.__projectId ||
+      selectedProject?.projectId;
+    if (!projectId) return;
+    const title =
+      (typeof selectedSession.summary === 'string' && selectedSession.summary.trim()) ||
+      (typeof selectedSession.name === 'string' && selectedSession.name.trim()) ||
+      'New session';
+    openTab({
+      sessionId: selectedSession.id,
+      projectId,
+      provider: selectedSession.__provider,
+      title,
+    });
+  }, [
+    selectedSession?.id,
+    selectedSession?.__projectId,
+    selectedSession?.__provider,
+    selectedSession?.summary,
+    selectedSession?.name,
+    selectedProject?.projectId,
+    openTab,
+  ]);
+
+  // When the projects payload refreshes (e.g. server-pushed summary update),
+  // sync any matching tab titles so renamed sessions reflect everywhere.
+  useEffect(() => {
+    if (tabs.length === 0 || projects.length === 0) return;
+    for (const tab of tabs) {
+      const project = projects.find((p) => p.projectId === tab.projectId);
+      if (!project) continue;
+      const session = getAllSessions(project).find((s) => String(s.id) === tab.sessionId);
+      if (!session) continue;
+      const nextTitle =
+        (typeof session.summary === 'string' && session.summary.trim()) ||
+        (typeof session.name === 'string' && session.name.trim()) ||
+        tab.title;
+      if (nextTitle !== tab.title) {
+        updateTabTitle(tab.sessionId, nextTitle);
+      }
+    }
+  }, [projects, tabs, updateTabTitle]);
+
+  const handleTabSelect = useCallback(
+    (tab: SessionTab) => {
+      const project = projects.find((p) => p.projectId === tab.projectId);
+      if (project) {
+        const session = getAllSessions(project).find((s) => String(s.id) === tab.sessionId);
+        if (session) {
+          handleSessionSelect({ ...session, __provider: tab.provider, __projectId: tab.projectId });
+          return;
+        }
+      }
+      // Fall back to a synthetic session if the projects payload hasn't caught
+      // up yet — the URL-driven effect in useProjectsState will hydrate the
+      // real one once it loads.
+      handleSessionSelect({
+        id: tab.sessionId,
+        summary: tab.title,
+        __provider: tab.provider,
+        __projectId: tab.projectId,
+      });
+    },
+    [handleSessionSelect, projects],
+  );
+
+  const handleTabClose = useCallback(
+    (sessionIdToClose: string) => {
+      const nextActive = closeTab(sessionIdToClose, selectedSession?.id ?? null);
+      if (sessionIdToClose !== selectedSession?.id) {
+        return;
+      }
+      if (nextActive) {
+        const replacement = tabs.find((t) => t.sessionId === nextActive);
+        if (replacement) {
+          handleTabSelect(replacement);
+          return;
+        }
+      }
+      navigate('/');
+    },
+    [closeTab, handleTabSelect, navigate, selectedSession?.id, tabs],
+  );
+
+  // Wrap the project/session delete callbacks so the tab strip stays in sync.
+  const sidebarSharedPropsWithTabs = useMemo(
+    () => ({
+      ...sidebarSharedProps,
+      onSessionDelete: (deletedSessionId: string) => {
+        removeTab(deletedSessionId);
+        handleSessionDelete(deletedSessionId);
+      },
+      onProjectDelete: (deletedProjectId: string) => {
+        removeTabsForProject(deletedProjectId);
+        handleProjectDelete(deletedProjectId);
+      },
+    }),
+    [handleProjectDelete, handleSessionDelete, removeTab, removeTabsForProject, sidebarSharedProps],
+  );
 
   usePaletteOpsRegister({
     openSettings,
@@ -154,7 +268,7 @@ function AppContentInner() {
           className="relative h-full flex-shrink-0 border-r border-border/50"
           style={isSidebarVisibleDesktop ? { width: `${sidebarWidth}px` } : undefined}
         >
-          <Sidebar {...sidebarSharedProps} />
+          <Sidebar {...sidebarSharedPropsWithTabs} />
           {isSidebarVisibleDesktop && (
             <SidebarResizeHandle
               width={sidebarWidth}
@@ -189,12 +303,19 @@ function AppContentInner() {
             onClick={(event) => event.stopPropagation()}
             onTouchStart={(event) => event.stopPropagation()}
           >
-            <Sidebar {...sidebarSharedProps} />
+            <Sidebar {...sidebarSharedPropsWithTabs} />
           </div>
         </div>
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <ConversationTabs
+          tabs={tabs}
+          activeSessionId={selectedSession?.id ?? null}
+          projects={projects}
+          onSelectTab={handleTabSelect}
+          onCloseTab={handleTabClose}
+        />
         <MainContent
           selectedProject={selectedProject}
           selectedSession={selectedSession}
