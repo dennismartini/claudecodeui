@@ -19,6 +19,7 @@ import {
   SIDEBAR_MAX_WIDTH,
 } from '../../hooks/useSidebarWidth';
 import { useOpenSessionTabs, type SessionTab } from '../../hooks/useOpenSessionTabs';
+import { useSessionAttention } from '../../hooks/useSessionAttention';
 import { getAllSessions } from '../sidebar/utils/utils';
 
 export default function AppContent() {
@@ -78,6 +79,7 @@ function AppContentInner() {
   });
 
   const { tabs, openTab, closeTab, removeTab, removeTabsForProject, updateTabTitle } = useOpenSessionTabs();
+  const { attentionSessions } = useSessionAttention();
 
   // Mirror the active session into the tab strip. We open a tab on every
   // selectedSession change (the hook focuses an existing tab if it's already
@@ -313,6 +315,8 @@ function AppContentInner() {
           tabs={tabs}
           activeSessionId={selectedSession?.id ?? null}
           projects={projects}
+          attentionSessions={attentionSessions}
+          processingSessions={processingSessions}
           onSelectTab={handleTabSelect}
           onCloseTab={handleTabClose}
         />

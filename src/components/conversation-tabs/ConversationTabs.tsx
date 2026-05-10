@@ -10,6 +10,8 @@ type ConversationTabsProps = {
   tabs: SessionTab[];
   activeSessionId: string | null;
   projects: Project[];
+  attentionSessions?: Set<string>;
+  processingSessions?: Set<string>;
   onSelectTab: (tab: SessionTab) => void;
   onCloseTab: (sessionId: string) => void;
 };
@@ -23,6 +25,8 @@ export default function ConversationTabs({
   tabs,
   activeSessionId,
   projects,
+  attentionSessions,
+  processingSessions,
   onSelectTab,
   onCloseTab,
 }: ConversationTabsProps) {
@@ -42,6 +46,8 @@ export default function ConversationTabs({
       {tabs.map((tab) => {
         const isActive = tab.sessionId === activeSessionId;
         const projectLabel = projectLabelFor(projects, tab.projectId);
+        const needsAttention = Boolean(attentionSessions?.has(tab.sessionId));
+        const isProcessing = Boolean(processingSessions?.has(tab.sessionId));
         return (
           <div
             key={tab.sessionId}
@@ -50,6 +56,7 @@ export default function ConversationTabs({
               isActive
                 ? 'border-border/70 bg-card text-foreground shadow-sm'
                 : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground',
+              needsAttention && !isActive && 'border-amber-400/60 bg-amber-50/40 text-foreground dark:border-amber-500/40 dark:bg-amber-900/15',
             )}
           >
             <button
@@ -57,9 +64,24 @@ export default function ConversationTabs({
               type="button"
               onClick={() => onSelectTab(tab)}
               className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
-              title={`${projectLabel ? projectLabel + ' — ' : ''}${tab.title}`}
+              title={
+                needsAttention
+                  ? `Waiting for your input — ${projectLabel ? projectLabel + ' — ' : ''}${tab.title}`
+                  : `${projectLabel ? projectLabel + ' — ' : ''}${tab.title}`
+              }
             >
-              <SessionProviderLogo provider={tab.provider} className="h-3 w-3 flex-shrink-0" />
+              <span className="relative flex h-3 w-3 flex-shrink-0 items-center justify-center">
+                <SessionProviderLogo provider={tab.provider} className="h-3 w-3" />
+                {needsAttention && (
+                  <span className="absolute -right-1 -top-1 flex h-2 w-2 items-center justify-center">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                  </span>
+                )}
+                {!needsAttention && isProcessing && (
+                  <span className="absolute -right-1 -top-1 inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                )}
+              </span>
               <span className="truncate">{tab.title || 'Untitled session'}</span>
               {projectLabel && (
                 <span className="hidden truncate text-[10px] text-muted-foreground/70 lg:inline">
